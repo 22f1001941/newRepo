@@ -1,0 +1,45 @@
+name: Daily Automated Commit
+
+on:
+  schedule:
+    # Runs daily at 10:00 AM UTC
+    # Adjust 'minute' and 'hour' as needed, but keep them specific (not wildcards)
+    - cron: '0 10 * * *'
+  workflow_dispatch: # Allows manual triggering for testing
+
+jobs:
+  daily_commit:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        # Important: Use a PAT with repo scope or the built-in GITHUB_TOKEN.
+        # The default GITHUB_TOKEN does not trigger new workflows.
+        # However, for simply pushing a commit, GITHUB_TOKEN is sufficient.
+        # If this commit needs to trigger other workflows, you'd need a PAT.
+        # For this task, GITHUB_TOKEN is generally okay as it's an automated commit.
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Git user with 22f1001941@ds.study.iitm.ac.in
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com" # Standard email for GitHub Actions commits
+
+    - name: Create or update a timestamp file
+      run: |
+        # Create a directory if it doesn't exist
+        mkdir -p ./.github/automated_commits
+        # Write current timestamp to a file. This ensures a change exists in each run.
+        echo "Last automated commit: $(date)" > ./.github/automated_commits/last_commit_timestamp.txt
+
+    - name: Add and commit changes
+      run: |
+        git add ./.github/automated_commits/last_commit_timestamp.txt
+        git commit -m "Automated daily commit: Update timestamp" || echo "No changes to commit"
+
+    - name: Push changes
+      run: |
+        # Only push if there were actual changes to commit
+        git push origin ${{ github.ref_name }} || echo "Nothing to push"
